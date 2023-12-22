@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+var jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 
@@ -20,45 +21,72 @@ const client = new MongoClient(uri, {
     },
 });
 
+// app.post('/jwt', async (req, res) => {
+//     const user = req.body;
+//     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+//     res.send({ token });
+// });
+
+//middlewares
+// const verifyToken = (req, res, next) => {
+//     console.log('inside verify token', req.headers.authorization);
+//     if (!req.headers.authorization) {
+//         return res.status(401).send({ message: 'Unauthorized Access' });
+//     }
+//     const token = req.headers.authorization.split(' ')[1];
+//     console.log(token);
+//     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+//         if (err) {
+//             return res.status(401).send({ message: 'Unauthorized access' })
+//         }
+//         req.decoded = decoded;
+//         next();
+//     })
+
+// };
+
+
 async function run() {
     try {
         await client.connect();
         const taskCollection = client.db("taskDB").collection("tasks");
 
         app.get('/tasks', async (req, res) => {
-            const result = await taskCollection.find().toArray();
+            const userEmail = req.query.email;
+            const result = await taskCollection.find({ email: userEmail }).toArray();
             res.send(result);
-          });
-      
-          app.post('/tasks', async (req, res) => {
+        });
+
+        app.post('/tasks', async (req, res) => {
             const task = req.body;
             task.createdAt = new Date();
+            // task.userId = req.decoded._id;
             const result = await taskCollection.insertOne(task);
             res.send(result);
-          });
-      
-          app.put('/tasks/:id', async (req, res) => {
+        });
+
+        app.put('/tasks/:id', async (req, res) => {
             const id = req.params.id;
             const newStatus = req.body.status;
-            const filter = { _id: new ObjectId(id) };
+            const filter = { _id: new ObjectId(id) }; 
             const update = { $set: { status: newStatus } };
             const result = await taskCollection.updateOne(filter, update);
             res.send(result);
-          });
+        });
 
-          app.delete('/tasks/:id', async (req, res) => {
+        app.delete('/tasks/:id', async (req, res) => {
             const id = req.params.id;
-            const filter = { _id: new ObjectId(id) };
+            const filter = { _id: new ObjectId(id) }; 
             const result = await taskCollection.deleteOne(filter);
             res.send(result);
-          });
-      
-          console.log('Connected to MongoDB!');
-        } finally {
-          // Ensure that the client will close when you finish/error
-          // await client.close();
-        }
-      }
+        });
+
+        console.log('Connected to MongoDB!');
+    } finally {
+        // Ensure that the client will close when you finish/error
+        // await client.close();
+    }
+}
       
       run().catch(console.dir);
       
