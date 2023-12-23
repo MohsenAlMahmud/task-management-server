@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-var jwt = require('jsonwebtoken');
+// var jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 
@@ -48,8 +48,18 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        await client.connect();
+        // await client.connect();
         const taskCollection = client.db("taskDB").collection("tasks");
+        const profileCollection = client.db("taskDB").collection("profiles");
+
+        app.get('/', (req, res) => {
+            res.send('SIMPLE CRUD IS RUNNING');
+        });
+
+        // app.get("/tasks", async (req, res) => {
+        //     const result = await blogCollection.find().toArray();
+        //     res.send(result);
+        // });
 
         app.get('/tasks', async (req, res) => {
             const userEmail = req.query.email;
@@ -80,6 +90,52 @@ async function run() {
             const result = await taskCollection.deleteOne(filter);
             res.send(result);
         });
+
+        //profile collection
+
+        app.get('/profiles', async (req, res) => {
+            const userEmail = req.query.email;
+            const result = await profileCollection.find({ email: userEmail }).toArray();
+            res.send(result);
+        });
+
+        app.get('/', async (req, res) => {
+            try {
+                const userEmail = req.query.email;
+                console.log('User Email:', userEmail);
+        
+                if (!userEmail) {
+                    return res.status(400).json({ error: 'Email parameter is required.' });
+                }
+        
+                const result = await profileCollection.findOne({ email: userEmail });
+                console.log('Profile Result:', result);
+        
+                if (!result) {
+                    return res.status(404).json({ error: 'Profile not found.' });
+                }
+        
+                res.json(result);
+            } catch (error) {
+                console.error('Error fetching profile:', error);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
+
+        app.post('/profiles', async (req, res) => {
+            const profile = req.body;
+            profile.createdAt = new Date();
+            const result = await profileCollection.insertOne(profile);
+            res.send(result);
+        });
+        //  app.post('/profiles', async (req, res) => {
+        //     const profile = req.body;
+        //     profile.createdAt = new Date();
+        //     console.log('new profile', profile);
+        //     const result = await profileCollection.insertOne(profile);
+        //     console.log(result);
+        //     res.send(result);
+        // });
 
         console.log('Connected to MongoDB!');
     } finally {
